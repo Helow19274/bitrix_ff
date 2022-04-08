@@ -6,12 +6,12 @@ use Bitrix\Main\Application;
 class cdekff extends CModule {
 
     public function __construct() {
-        require_once __DIR__.'/version.php';
+        require __DIR__.'/version.php';
         $this->MODULE_ID = 'cdekff';
         $this->MODULE_VERSION = $arModuleVersion['VERSION'];
         $this->MODULE_VERSION_DATE = $arModuleVersion['VERSION_DATE'];
         $this->MODULE_NAME = 'Интеграция с Фулфилмент СДЭК';
-        $this->MODULE_DESCRIPTION = 'Модуль для автоматического переноса товаров и заказов в Фулфилмент СДЭК';
+        $this->MODULE_DESCRIPTION = 'Модуль для автоматического переноса заказов в Фулфилмент СДЭК';
     }
 
     public function DoInstall() {

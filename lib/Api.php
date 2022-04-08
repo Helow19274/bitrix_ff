@@ -147,7 +147,11 @@ class Api {
                 'value' => $order->getId()
             ]]
         ];
-        $orderApi = $this->request('GET', '/api/products/order', $data)->getResult(true)['_embedded']['order'][0];
+        $orderApi = $this->request('GET', '/api/products/order', $data)->getResult(true)['_embedded']['order'];
+        if (sizeof($orderApi) == 0) {
+            return;
+        }
+        $orderApi = $orderApi[0];
 
         $deliveryRequestId = $orderApi['_embedded']['deliveryRequest']['id'];
 
@@ -225,12 +229,22 @@ class Api {
             ],
             'orderProducts' => []
         ];
+        if ($payload['paymentState'] == 'paid') {
+            $payload['eav']['delivery-services-request-data']['retailPrice'] = 0;
+        }
 
         $pvzProperty = Option::get('ipol.sdek', 'pvzPicker');
+        if (!$pvzProperty) {
+            $pvzProperty = 'ADDRESS';
+        }
 
         if (strpos($properties[$pvzProperty], '#S') === false) {
             Debug::dumpToFile('courier', '', '__bx_log.log');
-            $payload['address']['notFormal'] = $properties['STREET'].', '.$properties['HOUSE'].', '.$properties['FLAT'];
+            if ($properties['STREET']) {
+                $payload['address']['notFormal'] = $properties['STREET'].', '.$properties['HOUSE'].', '.$properties['FLAT'];
+            } else {
+                $payload['address']['notFormal'] = $properties['ADDRESS'];
+            }
             $payload['eav']['delivery-services-request-data']['rate'] = 49;
         } else {
             Debug::dumpToFile('pvz', '', '__bx_log.log');
