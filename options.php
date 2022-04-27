@@ -36,31 +36,50 @@ $arGroups = array(
     'PAYMENT_SERVICES' => array('TITLE' => 'Способы оплаты', 'TAB' => 3),
 );
 
-$rsIblock = CCatalog::GetList(array(), array(
-    'ACTIVE' => 'Y',
-));
-
 $countriesSel = $arDSSenders = $arProductsShops = $arOrderPropsSel = $arWarehouses = array(
     'REFERENCE_ID' => array(0),
     'REFERENCE' => array('Выбрать...'),
 );
+
+$prefix = null;
+$rsSites = CSite::GetList($by = "sort", $order = "desc", Array("ACTIVE" => "Y"));
+if ($rsSites->SelectedRowsCount() > 1) {
+    while ($arSite = $rsSites->Fetch()) {
+        if ($_SERVER['HTTP_HOST'] == $arSite['SERVER_NAME']) {
+            break;
+        }
+    }
+
+    if ($arSite['DEF'] != 'Y') {
+        $prefix = strtoupper($arSite['LID']);
+    }
+}
+
 $arOrderStatusSel = array();
 $rsOrderStatuses = CSaleStatus::GetList(array(), array(
-    'LID' => LANGUAGE_ID,
+    'LID' => LANGUAGE_ID
 ));
+
 while ($arOrderStatus = $rsOrderStatuses->Fetch()) {
-    $arOrderStatusSel['REFERENCE_ID'][] = $arOrderStatus['ID'];
-    $arOrderStatusSel['REFERENCE'][] = $arOrderStatus['NAME'];
+    if (!in_array($arOrderStatus['ID'], $arOrderStatusSel['REFERENCE_ID'])) {
+        $arOrderStatusSel['REFERENCE_ID'][] = $arOrderStatus['ID'];
+        $arOrderStatusSel['REFERENCE'][] = $arOrderStatus['NAME'];
+    }
 }
 
 $arOrderDeliverySel = array();
-foreach (\Bitrix\Sale\Delivery\Services\Manager::getActiveList() as $arOrderDelivery) {
-    $arOrderDeliverySel['REFERENCE_ID'][] = $arOrderDelivery['ID'];
-    $arOrderDeliverySel['REFERENCE'][] = $arOrderDelivery['NAME'];
+$rsOrderDeliveries = CSaleDelivery::GetList(array(), array(
+    'LID' => LANGUAGE_ID
+));
+while ($arOrderDelivery = $rsOrderDeliveries->Fetch()) {
+    if (!in_array($arOrderDelivery['ID'], $arOrderDeliverySel['REFERENCE_ID'])) {
+        $arOrderDeliverySel['REFERENCE_ID'][] = $arOrderDelivery['ID'];
+        $arOrderDeliverySel['REFERENCE'][] = $arOrderDelivery['NAME'];
+    }
 }
 
-$publicKey = COption::GetOptionString(ADMIN_MODULE_NAME, 'ORDERADMIN_PUBLIC_KEY');
-$secret = COption::GetOptionString(ADMIN_MODULE_NAME, 'ORDERADMIN_SECRET');
+$publicKey = COption::GetOptionString(ADMIN_MODULE_NAME, join('_', [$prefix, 'ORDERADMIN_PUBLIC_KEY']));
+$secret = COption::GetOptionString(ADMIN_MODULE_NAME, join('_', [$prefix, 'ORDERADMIN_SECRET']));
 
 $orderadmin = new \Orderadmin\Api($publicKey, $secret);
 
@@ -200,24 +219,10 @@ $arOptions = array(
     ),
 );
 
-$rsSites = CSite::GetList($by = "sort", $order = "desc", Array("ACTIVE" => "Y"));
-if ($rsSites->SelectedRowsCount() > 1) {
-    $isDefault = false;
-    $site = false;
-    while ($arSite = $rsSites->Fetch()) {
-        if ($_SERVER['HTTP_HOST'] == $arSite['SERVER_NAME']) {
-            break;
-        }
-    }
-
-    if ($arSite['DEF'] != 'Y') {
-        $prefix = strtoupper($arSite['LID']);
-
-        foreach ($arOptions as $key => $value) {
-            $arOptions[join('_', array($prefix, $key))] = $value;
-
-            unset($arOptions[$key]);
-        }
+if ($prefix) {
+    foreach ($arOptions as $key => $value) {
+        $arOptions[join('_', [$prefix, $key])] = $value;
+        unset($arOptions[$key]);
     }
 }
 
