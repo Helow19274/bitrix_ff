@@ -68,9 +68,7 @@ while ($arOrderStatus = $rsOrderStatuses->Fetch()) {
 }
 
 $arOrderDeliverySel = array();
-$rsOrderDeliveries = CSaleDelivery::GetList(array(), array(
-    'LID' => LANGUAGE_ID
-));
+$rsOrderDeliveries = CSaleDelivery::GetList(array(), array());
 while ($arOrderDelivery = $rsOrderDeliveries->Fetch()) {
     if (!in_array($arOrderDelivery['ID'], $arOrderDeliverySel['REFERENCE_ID'])) {
         $arOrderDeliverySel['REFERENCE_ID'][] = $arOrderDelivery['ID'];
@@ -78,8 +76,8 @@ while ($arOrderDelivery = $rsOrderDeliveries->Fetch()) {
     }
 }
 
-$publicKey = COption::GetOptionString(ADMIN_MODULE_NAME, join('_', [$prefix, 'ORDERADMIN_PUBLIC_KEY']));
-$secret = COption::GetOptionString(ADMIN_MODULE_NAME, join('_', [$prefix, 'ORDERADMIN_SECRET']));
+$secret = COption::GetOptionString(ADMIN_MODULE_NAME, trim(join('_', [$prefix, 'ORDERADMIN_SECRET']), ' _'));
+$publicKey = COption::GetOptionString(ADMIN_MODULE_NAME, trim(join('_', [$prefix, 'ORDERADMIN_PUBLIC_KEY']), ' _'));
 
 $orderadmin = new \Orderadmin\Api($publicKey, $secret);
 
