@@ -206,9 +206,9 @@ class Api {
             'totalPrice' => $totalPrice,
             'profile' => [
                 'name' => $propertyCollection->getProfileName()->getValue(),
-                'phone' => $propertyCollection->getPhone()->getValue(),
                 'email' => $propertyCollection->getUserEmail()->getValue(),
             ],
+            'phone' => $propertyCollection->getPhone()->getValue(),
             'address' => [
                 'country' => $countryId,
                 'locality' => $postcode['_embedded']['postcodes'][0]['_embedded']['locality']['id'],
