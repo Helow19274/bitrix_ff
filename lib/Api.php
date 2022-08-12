@@ -195,7 +195,7 @@ class Api {
         ];
         $postcode = $this->request(HttpClient::HTTP_GET, '/api/delivery-services/postcodes', $data)->getResult(true);
         $totalPrice = $order->getPrice();
-        $orderPrice = $basket->getBasePrice();
+        $orderPrice = $basket->getPrice();
 
         $payload = [
             'shop' => $shopId,
@@ -272,6 +272,7 @@ class Api {
                     'extId' => $basketItem->getProductId(),
                 ],
                 'count' => $basketItem->getQuantity(),
+                'price' => $basketItem->getPrice(),
             ];
             array_push($payload['orderProducts'], $orderProduct);
         }
