@@ -23,6 +23,7 @@ class Api {
     protected $result;
     protected $error;
     protected $httpClient;
+    protected $prefix;
 
     public function __construct($publicKey = null, $secret = null) {
         $this->publicKey = $publicKey;
@@ -31,6 +32,20 @@ class Api {
         $this->httpClient->setRedirect(false);
         $this->httpClient->setHeader('Content-Type', 'application/json');
         $this->httpClient->setAuthorization($publicKey, $secret);
+
+        $this->prefix = null;
+        $rsSites = \CSite::GetList($by = "sort", $order = "desc", Array("ACTIVE" => "Y"));
+        if ($rsSites->SelectedRowsCount() > 1) {
+            while ($arSite = $rsSites->Fetch()) {
+                if ($_SERVER['HTTP_HOST'] == $arSite['SERVER_NAME']) {
+                    break;
+                }
+            }
+
+            if ($arSite['DEF'] != 'Y') {
+                $this->prefix = strtoupper($arSite['LID']);
+            }
+        }
     }
 
     public function getResult($decode = false) {
@@ -167,9 +182,10 @@ class Api {
     }
 
     public function createOrder($order) {
-        $shopId = Option::get(self::$MODULE_ID, 'ORDERADMIN_SHOP');
-        $countryId = Option::get(self::$MODULE_ID, 'ORDERADMIN_BASE_COUNTRY');
-        $notPaidPS = unserialize(Option::get(self::$MODULE_ID, 'ORDERADMIN_PREPAYMENT_SERVICES'));
+        Debug::dumpToFile('creating order', '', '__bx_log.log');
+        $shopId = Option::get(self::$MODULE_ID, trim(join('_', [$this->prefix, 'ORDERADMIN_SHOP']), ' _'));
+        $countryId = Option::get(self::$MODULE_ID, trim(join('_', [$this->prefix, 'ORDERADMIN_BASE_COUNTRY']), ' _'));
+        $notPaidPS = unserialize(Option::get(self::$MODULE_ID, trim(join('_', [$this->prefix, 'ORDERADMIN_PREPAYMENT_SERVICES']), ' _')));
 
         $basket = $order->getBasket();
 
@@ -194,16 +210,17 @@ class Api {
             ]]
         ];
         $postcode = $this->request(HttpClient::HTTP_GET, '/api/delivery-services/postcodes', $data)->getResult(true);
-        $totalPrice = $order->getPrice();
-        $orderPrice = $basket->getPrice();
+		if (strval($data['filter'][0]['value']) == '101000') {
+			$locality = '62216';
+		} else {
+			$locality = $postcode['_embedded']['postcodes'][0]['_embedded']['locality']['id'];
+		}
 
         $payload = [
             'shop' => $shopId,
             'extId' => $order->getId(),
             'date' => $order->getDateInsert()->toString(),
             'paymentState' => in_array($order->getPaymentSystemId()[0], $notPaidPS) ? 'not_paid' : 'paid',
-            'orderPrice' => $orderPrice,
-            'totalPrice' => $totalPrice,
             'profile' => [
                 'name' => $propertyCollection->getProfileName()->getValue(),
                 'email' => $propertyCollection->getUserEmail()->getValue(),
@@ -211,26 +228,31 @@ class Api {
             'phone' => $propertyCollection->getPhone()->getValue(),
             'address' => [
                 'country' => $countryId,
-                'locality' => $postcode['_embedded']['postcodes'][0]['_embedded']['locality']['id'],
+                'locality' => $locality,
                 'postcode' => $propertyCollection->getDeliveryLocationZip()->getValue(),
                 'street' => $properties[Option::get('ipol.sdek', 'street')],
                 'house' => $properties[Option::get('ipol.sdek', 'house')],
                 'apartment' => $properties[Option::get('ipol.sdek', 'flat')],
             ],
             'eav' => [
-                'delivery-services-request' => true,
-                'order-reserve-warehouse' => Option::get(self::$MODULE_ID, 'ORDERADMIN_WAREHOUSE'),
-                'delivery-services-request-data' => [
-                    'sender' => Option::get(self::$MODULE_ID, 'ORDERADMIN_SENDER'),
-                    'retailPrice' => $totalPrice - $orderPrice,
-                    'payment' => in_array($order->getPaymentSystemId()[0], $notPaidPS) ? $totalPrice : '0',
-                    'estimatedCost' => $orderPrice,
-                ]
+                'order-reserve-warehouse' => Option::get(self::$MODULE_ID, trim(join('_', [$this->prefix, 'ORDERADMIN_WAREHOUSE']), ' _')),
+            ],
+            'deliveryRequest' => [
+                'sender' => Option::get(self::$MODULE_ID, trim(join('_', [$this->prefix, 'ORDERADMIN_SENDER']), ' _')),
+                'retailPrice' => $order->getDeliveryPrice(),
+                'payment' => in_array($order->getPaymentSystemId()[0], $notPaidPS) ? $basket->getPrice() : '0',
             ],
             'orderProducts' => []
         ];
         if ($payload['paymentState'] == 'paid') {
-            $payload['eav']['delivery-services-request-data']['retailPrice'] = 0;
+            $payload['deliveryRequest']['retailPrice'] = 0;
+        }
+
+        $shipment_collection = $order->getShipmentCollection()->getNotSystemItems();
+        $shipment_collection->rewind();
+        $track = $shipment_collection->current()->getField('TRACKING_NUMBER');
+        if ($track) {
+            $payload['deliveryRequest']['trackingNumber'] = $track;
         }
 
         $pvzProperty = Option::get('ipol.sdek', 'pvzPicker');
@@ -245,11 +267,11 @@ class Api {
             } else {
                 $payload['address']['notFormal'] = $properties['ADDRESS'];
             }
-            $payload['eav']['delivery-services-request-data']['rate'] = 49;
+            $payload['deliveryRequest']['rate'] = 49;
         } else {
             Debug::dumpToFile('pvz', '', '__bx_log.log');
             $payload['address']['notFormal'] = $properties['IPOLSDEK_PVZ'];
-            $payload['eav']['delivery-services-request-data']['rate'] = 48;
+            $payload['deliveryRequest']['rate'] = 48;
             $pvzProperty = explode('#S', $properties[Option::get('ipol.sdek', 'pvzPicker')]);
 
             $data = [
@@ -260,7 +282,7 @@ class Api {
                 ]]
             ];
             $pvz = $this->request(HttpClient::HTTP_GET, '/api/delivery-services/service-points', $data)->getResult(true);
-            $payload['eav']['delivery-services-request-data']['servicePoint'] = $pvz['_embedded']['servicePoints'][0]['id'];
+            $payload['deliveryRequest']['servicePoint'] = $pvz['_embedded']['servicePoints'][0]['id'];
         }
 
         $basketItems = $basket->getBasketItems();
@@ -272,7 +294,7 @@ class Api {
                     'extId' => $basketItem->getProductId(),
                 ],
                 'count' => $basketItem->getQuantity(),
-                'price' => $basketItem->getPrice(),
+				'price' => $basketItem->getPrice()
             ];
             array_push($payload['orderProducts'], $orderProduct);
         }
