@@ -210,11 +210,16 @@ class Api {
             ]]
         ];
         $postcode = $this->request(HttpClient::HTTP_GET, '/api/delivery-services/postcodes', $data)->getResult(true);
-		if (strval($data['filter'][0]['value']) == '101000') {
-			$locality = '62216';
-		} else {
-			$locality = $postcode['_embedded']['postcodes'][0]['_embedded']['locality']['id'];
-		}
+        if (strval($data['filter'][0]['value']) == '101000') {
+            $locality = '62216';
+        } else {
+            $locality = $postcode['_embedded']['postcodes'][0]['_embedded']['locality']['id'];
+        }
+	    
+        $phone = $propertyCollection->getPhone()->getValue();
+        if (strpos($phone, '+') === false) {
+            $phone = '+' . $phone;
+        }
 
         $payload = [
             'shop' => $shopId,
@@ -225,7 +230,7 @@ class Api {
                 'name' => $propertyCollection->getProfileName()->getValue(),
                 'email' => $propertyCollection->getUserEmail()->getValue(),
             ],
-            'phone' => $propertyCollection->getPhone()->getValue(),
+            'phone' => $phone,
             'address' => [
                 'country' => $countryId,
                 'locality' => $locality,
