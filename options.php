@@ -61,7 +61,7 @@ $rsOrderStatuses = CSaleStatus::GetList(array(), array(
 ));
 
 while ($arOrderStatus = $rsOrderStatuses->Fetch()) {
-    if (!in_array($arOrderStatus['ID'], $arOrderStatusSel['REFERENCE_ID'])) {
+    if (!in_array($arOrderStatus['ID'], $arOrderStatusSel['REFERENCE_ID'] ?? [])) {
         $arOrderStatusSel['REFERENCE_ID'][] = $arOrderStatus['ID'];
         $arOrderStatusSel['REFERENCE'][] = $arOrderStatus['NAME'];
     }
@@ -70,7 +70,7 @@ while ($arOrderStatus = $rsOrderStatuses->Fetch()) {
 $arOrderDeliverySel = array();
 $rsOrderDeliveries = \Bitrix\Sale\Delivery\Services\Manager::getActiveList();
 foreach ($rsOrderDeliveries as $arOrderDelivery) {
-    if (!in_array($arOrderDelivery['ID'], $arOrderDeliverySel['REFERENCE_ID'])) {
+    if (!in_array($arOrderDelivery['ID'], $arOrderDeliverySel['REFERENCE_ID'] ?? [])) {
         $arOrderDeliverySel['REFERENCE_ID'][] = $arOrderDelivery['ID'];
         $arOrderDeliverySel['REFERENCE'][] = $arOrderDelivery['NAME'];
     }

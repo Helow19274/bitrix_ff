@@ -225,7 +225,7 @@ class Api {
             'shop' => $shopId,
             'extId' => $order->getId(),
             'date' => $order->getDateInsert()->toString(),
-            'paymentState' => in_array($order->getPaymentSystemId()[0], $notPaidPS) ? 'not_paid' : 'paid',
+            'paymentState' => in_array($order->getPaymentSystemId()[0], $notPaidPS ?: []) ? 'not_paid' : 'paid',
             'profile' => [
                 'name' => $propertyCollection->getProfileName()->getValue(),
                 'email' => $propertyCollection->getUserEmail()->getValue(),
@@ -245,7 +245,7 @@ class Api {
             'deliveryRequest' => [
                 'sender' => Option::get(self::$MODULE_ID, trim(join('_', [$this->prefix, 'ORDERADMIN_SENDER']), ' _')),
                 'retailPrice' => $order->getDeliveryPrice(),
-                'payment' => in_array($order->getPaymentSystemId()[0], $notPaidPS) ? $basket->getPrice() : '0',
+                'payment' => in_array($order->getPaymentSystemId()[0], $notPaidPS ?: []) ? $basket->getPrice() : '0',
             ],
             'orderProducts' => []
         ];

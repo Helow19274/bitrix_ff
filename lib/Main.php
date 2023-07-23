@@ -8,7 +8,7 @@ use Bitrix\Main\Diag\Debug;
 class Main {
     static $MODULE_NAME = "cdekff";
 
-    public function orderSaved(Event $event) {
+    public static function orderSaved(Event $event) {
         $prefix = null;
         $rsSites = \CSite::GetList($by = "sort", $order = "desc", Array("ACTIVE" => "Y"));
         if ($rsSites->SelectedRowsCount() > 1) {
@@ -38,8 +38,8 @@ class Main {
             $api->cancelOrder($order);
         } else if (!array_key_exists('CANCELED', $oldValues)
             && !$order->isCanceled()
-            && in_array($order->getField('STATUS_ID'), $allowedStatuses)
-            && in_array($order->getDeliverySystemId()[0], $allowedDeliveries)
+            && in_array($order->getField('STATUS_ID'), $allowedStatuses ?: [])
+            && in_array($order->getDeliverySystemId()[0], $allowedDeliveries ?: [])
         ) {
             $api = new Api(
                 Option::get(self::$MODULE_NAME, trim(join('_', [$prefix, 'ORDERADMIN_PUBLIC_KEY']), ' _')),
