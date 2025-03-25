@@ -71,8 +71,14 @@ $arOrderDeliverySel = array();
 $rsOrderDeliveries = \Bitrix\Sale\Delivery\Services\Manager::getActiveList();
 foreach ($rsOrderDeliveries as $arOrderDelivery) {
     if (!in_array($arOrderDelivery['ID'], $arOrderDeliverySel['REFERENCE_ID'] ?? [])) {
+        $name = $arOrderDelivery['NAME'];
+        if ($arOrderDelivery['PARENT_ID'] != 0) {
+            $parent = \Bitrix\Sale\Delivery\Services\Manager::getById($arOrderDelivery['PARENT_ID']);
+            $name = $parent['NAME'] . ': ' . $name;
+        }
+
         $arOrderDeliverySel['REFERENCE_ID'][] = $arOrderDelivery['ID'];
-        $arOrderDeliverySel['REFERENCE'][] = $arOrderDelivery['NAME'];
+        $arOrderDeliverySel['REFERENCE'][] = $name;
     }
 }
 
